@@ -2,167 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>peanutbutter-porkchop</title>
   <style>
-    * { padding: 0; margin: 0; }
-    html, body { height: 100%; overflow: hidden; background: #000; }
-    canvas { display: block; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+    #stage { position: fixed; inset: 0; touch-action: none; }
+    #stage canvas { display: block; width: 100%; height: 100%; }
+    #grid {
+      position: fixed; inset: 0; display: grid; place-items: center; touch-action: none;
+      perspective: 1400px; perspective-origin: 50% 50%;
+      transition: transform .35s cubic-bezier(.4, 0, .2, 1), opacity .35s;
+      will-change: transform;
+    }
+    #cells {
+      display: grid; justify-content: center;
+      transform-style: preserve-3d;
+      transform: rotateX(var(--tx, 0deg)) rotateY(var(--ty, 0deg));
+      transition: transform .6s cubic-bezier(.2, .8, .2, 1);
+    }
+    #cells figure {
+      position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #111; border-radius: 6px;
+      outline: 2px solid transparent; outline-offset: 3px;
+      transform: translateZ(var(--z, 0px)) rotateY(var(--ry, 0deg)) scale(var(--pop, 1));
+      transition: outline-color .15s, transform .3s;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+    }
+    #cells figure.active { --pop: 1.06; outline-color: #fff; z-index: 1; }
+    #cells figure.broken { background: repeating-linear-gradient(45deg, #111 0 8px, #1a1a1a 8px 16px); }
+    #cells canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    body[data-mode="full"] #grid { opacity: 0; pointer-events: none; }
+    body[data-mode="grid"] #stage { visibility: hidden; }
+    body.snap #grid { transition: none; }
   </style>
-</head>
-<body>
-  <div id="container"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/89/three.min.js"></script>
-      <script id="vertexShader" type="x-shader/x-vertex">
-          void main() {
-              gl_Position = vec4( position, 1.0 );
-          }
-      </script>
-      <script id="fragmentShader" type="x-shader/x-fragment">
-      //参考　https://tympanus.net/Development/ScrollSpiral/
-
-      #define TWO_PI 6.2831853072
-    	#define PI 3.14159265359
-
-    	precision highp float;
-    	uniform vec2 resolution;
-    	uniform float time;
-
-    	const float displace = 1.;
-    	const float gridSize = 6.;
-    	const int layers = 1;
-    	const float detail = 1.0;
-    	const float wave = 5.0;
-
-    	vec2 rotate(vec2 v, float angle) {
-    		float c = cos(angle);
-    		float s = sin(angle);
-    		return v * mat2(c, -s, s, c);
-    	}
-
-    	vec3 coordToHex(vec2 coord, float scale, float angle) {
-    		vec2 c = rotate(coord, angle);
-    		float q = (1.0 / 3.0 * sqrt(3.0) * c.x - 1.0 / 3.0 * c.y) * scale;
-    		float r = 2.0 / 3.0 * c.y * scale;
-    		return vec3(q, r, -q - r);
-    	}
-
-    	vec3 hexToCell(vec3 hex, float m) {
-    		return sin(hex / m) * 2.0 - 1.0;
-    	}
-
-    	float absMax(vec3 v) {
-    		return max(max(abs(v.x), abs(v.y)), abs(v.z));
-    	}
-
-    	float nsin(float value) {
-    		return sin(value * TWO_PI) * 0.5 + 0.5;
-    	}
-
-    	float hexToFloat(vec3 hex, float amt) {
-    		return mix(absMax(hex), 1.0 - length(hex) / sqrt(3.0), amt);
-    	}
-
-    	float calc(vec3 hex, float time, float len) {
-    		float value = 0.0;
-    		for (int i = 0; i < layers; i++) {
-    			vec3 cell = hexToCell(hex, 1.0);
-    			value += nsin(
-    				hexToFloat(
-    					cell,
-    					nsin(len * wave + time + float(i) / float(layers))
-    				) * detail + nsin(time * 0.5)
-    			);
-    		}
-
-    		return value / float(layers);
-    	}
-
-    	void main(void) {
-    		vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-    		float t = time *0.02;
-
-    		float rgb[3];
-    		float len = 1.0 - length(uv)*0.03;
-
-
-    		float zoom = nsin(t*0.1) + len *10.0;
-    		float angle = TWO_PI * nsin(t * 0.05);
-    		vec3 hex = coordToHex(uv, gridSize*zoom, angle);
-
-    		for (int i = 0; i < 3; i++) {
-    			float t2 = t + float(i) * displace;
-          hex[i] += 0.2;
-    			//rgb[i] = pow(calc(hex, t2, len), float(i)*0.5) * (0.2 + 0.8 * sin(PI * len * 0.5));
-          rgb[i] = pow(calc(hex, t * displace, len),5.0) * (0.2 + 0.8 * sin(PI * len * 0.5)) * 2. - 1.0;
-    		}
-
-    		gl_FragColor = vec4(
-    			rgb[0],
-    			rgb[1],
-    			rgb[2],
-    			1.0
-    		);
-    	}
-
-      </script>
-  <script>
-var container;
-var camera, scene, renderer;
-var uniforms;
-
-init();
-animate();
-
-function init() {
-  container = document.getElementById('container');
-
-  camera = new THREE.Camera();
-  camera.position.z = 1;
-
-  scene = new THREE.Scene();
-
-  var geometry = new THREE.PlaneBufferGeometry(2, 2);
-
-  uniforms = {
-    time: { type: "f", value: 1.0 },
-    resolution: { type: "v2", value: new THREE.Vector2() } };
-
-
-  var material = new THREE.ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: document.getElementById('vertexShader').textContent,
-    fragmentShader: document.getElementById('fragmentShader').textContent });
-
-
-  var mesh = new THREE.Mesh(geometry, material);
-  scene.add(mesh);
-
-  renderer = new THREE.WebGLRenderer();
-  renderer.setPixelRatio(window.devicePixelRatio);
-
-  container.appendChild(renderer.domElement);
-
-  onWindowResize();
-  window.addEventListener('resize', onWindowResize, false);
-
-}
-
-function onWindowResize(event) {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  uniforms.resolution.value.x = renderer.domElement.width;
-  uniforms.resolution.value.y = renderer.domElement.height;
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  render();
-}
-
-function render() {
-  uniforms.time.value += 0.05;
-  renderer.render(scene, camera);
-}
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+        "wtc-gl": "https://esm.sh/wtc-gl@1.5.0"
+      }
+    }
   </script>
+</head>
+<body data-mode="full">
+  <main id="stage"></main>
+  <div id="grid"><div id="cells"></div></div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
