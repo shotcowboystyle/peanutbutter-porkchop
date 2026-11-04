@@ -8,9 +8,45 @@ export default shaderViz({
   credit: 'Liam Egan — https://codepen.io/shubniggurath/pen/ZYpmaEd',
   webgl2: true,
   dpr: 1, // 256-step raymarcher; dpr 1 keeps it smooth on laptops
-  uniforms(gl, u, t, w, h) {
+  tags: ['raymarching', 'SDF', 'gyroid', 'lighting'],
+  about: `A **raymarched** torus carved by a gyroid. There is no geometry: for every pixel a
+ray leaves the camera and steps forward by the distance to the nearest surface (the *signed
+distance function*, \`map()\`) until it lands. The torus SDF is intersected with a gyroid
+field, the surface normal is estimated by sampling the SDF around the hit, and a small
+lighting model (diffuse, hemisphere, back light, fresnel, AO) shades it.`,
+  params: {
+    speed:     { type: 'float', default: 0.3, min: 0, max: 1.5, step: 0.01, group: 'Motion', doc: 'Clock multiplier (the original ran at 1.0).' },
+    fov:       { type: 'float', default: 0.8, min: 0.2, max: 2, step: 0.01, group: 'Camera', doc: 'Base field of view factor.' },
+    fovAmp:    { type: 'float', default: 0.5, min: 0, max: 1, step: 0.01, group: 'Camera', doc: 'How much the FOV breathes with cos(time).' },
+    major:     { type: 'float', default: 2, min: 0.5, max: 4, step: 0.05, group: 'Shape', doc: 'Torus ring radius.' },
+    tube:      { type: 'float', default: 1.8, min: 0.2, max: 3, step: 0.05, group: 'Shape', doc: 'Torus tube radius. Larger than `major` turns it inside out.' },
+    breathe:   { type: 'float', default: 0.3, min: 0, max: 1, step: 0.01, group: 'Shape', doc: 'Amplitude of the tube radius pulse.' },
+    gyroid:    { type: 'float', default: 4, min: 1, max: 12, step: 0.1, group: 'Shape', doc: 'Frequency of the gyroid field that carves the surface.' },
+    thickness: { type: 'float', default: 0.3, min: 0.02, max: 0.8, step: 0.01, group: 'Shape', doc: 'Shell thickness after the gyroid cut.' },
+    colA:      { type: 'color', default: [0.8, 0.3, 0.6], group: 'Colour', doc: 'Surface colour A.' },
+    colB:      { type: 'color', default: [0.6, 0.3, 0.8], group: 'Colour', doc: 'Surface colour B.' },
+    bgCentre:  { type: 'color', default: [0.9, 0.85, 0.8], group: 'Colour', doc: 'Background at the centre of the screen.' },
+    bgEdge:    { type: 'color', default: [0.35, 0.5, 0.75], group: 'Colour', doc: 'Background toward the edges.' },
+    diffuse:   { type: 'float', default: 1, min: 0, max: 3, step: 0.05, group: 'Light', doc: 'Diffuse light strength.' },
+    fresnel:   { type: 'float', default: 0.3, min: 0, max: 2, step: 0.05, group: 'Light', doc: 'Rim light strength.' },
+    maxSteps:  { type: 'int', default: 256, min: 16, max: 512, step: 16, live: false, group: 'Quality', doc: 'Max raymarch steps (compile-time). Lower is faster and shows the classic banding artefacts.' },
+  },
+  presets: {
+    'Default': {},
+    'Coral': { gyroid: 8, thickness: 0.12, colA: [1, 0.5, 0.3], colB: [1, 0.85, 0.6], bgEdge: [0.1, 0.2, 0.4] },
+    'Low-fi': { maxSteps: 32, fovAmp: 0, speed: 0.15 },
+    'Fat ring': { major: 1.2, tube: 2.6, gyroid: 2.5, thickness: 0.5 },
+  },
+  notes: [
+    { title: 'The SDF', find: 'Model model(vec3 p) {', body: 'Everything about the shape lives here. `length(vec2(p.y, length(p.xz) - major)) - tube` is a torus; `D()` is a gyroid; combining them with `length(vec2(d, g)) - thickness` makes a shell.' },
+    { title: 'Marching', find: 'Surface march( in Camera cam )', body: 'Step along the ray by the SDF value (times STEP_MULTIPLIER for safety). Stop when close enough or too far.' },
+    { title: 'Normal by finite differences', find: 'vec3 calcNormal( in vec3 pos )', body: 'Sample the SDF a hair left/right, up/down, front/back. The gradient of a distance field is the surface normal.' },
+    { title: 'Compile-time step count', find: 'for( int i=0; i< maxSteps ; i++ )', body: '`maxSteps` is a #define so the loop bound is constant. Try 32 to see what under-marching looks like.' },
+    { title: 'Lighting', find: 'vec3 shade(vec3 col', body: 'Diffuse + hemisphere ambient + back light + fresnel, each scaled by AO. A compact, readable lighting rig worth copying.' },
+  ],
+  uniforms(gl, u, t, w, h, p) {
     gl.uniform2f(u('u_resolution'), w, h);
-    gl.uniform1f(u('u_time'), t * 0.3); // 70% slower than the original
+    gl.uniform1f(u('u_time'), t * p.speed); // default 0.3: 70% slower than the original
     gl.uniform3f(u('u_cp'), -100, 100, -200);
   },
   frag: `#version 300 es
@@ -19,6 +55,19 @@ export default shaderViz({
   uniform vec2 u_resolution;
   uniform float u_time;
   uniform vec3 u_cp;
+  uniform float fov;
+  uniform float fovAmp;
+  uniform float major;
+  uniform float tube;
+  uniform float breathe;
+  uniform float gyroid;
+  uniform float thickness;
+  uniform vec3 colA;
+  uniform vec3 colB;
+  uniform vec3 bgCentre;
+  uniform vec3 bgEdge;
+  uniform float diffuse;
+  uniform float fresnel;
 
   out vec4 c;
 
@@ -32,14 +81,12 @@ export default shaderViz({
   const vec3 BC = vec3(0.25,0.25,0.25);   // back light colour
   const vec3 FC = vec3(1.30,1.20,1.00);   // fresnel colour
   const float AS = .5;                     // ambient light strength
-  const float DS = 1.;                     // diffuse light strength
   const float BS = .3;                     // back light strength
-  const float FS = .3;                     // fresnel strength
   /* Raymarching constants */
   /* --------------------- */
   const float MAX_TRACE_DISTANCE = 10.;             // max trace distance
   const float INTERSECTION_PRECISION = 0.001;       // precision of the intersection
-  const int NUM_OF_TRACE_STEPS = 256;               // max number of trace steps
+  // maxSteps (max trace steps) is a #define
   const float STEP_MULTIPLIER = .5;                 // the step mutliplier - ie, how much further to progress on each step
 
   /* Structures */
@@ -82,7 +129,7 @@ export default shaderViz({
     vec3 r = normalize(vec3(f.z, 0., -f.x));
     vec3 u = normalize(cross(f, r));
 
-    float FOV = .8+cos(u_time)*.5;
+    float FOV = fov+cos(u_time)*fovAmp;
 
     return Camera(
       pos,
@@ -107,12 +154,12 @@ export default shaderViz({
     p.xy *= R(.3);
     p.x -= .5;
     p.y -= .5;
-    float d = abs(-(length(vec2(p.y, length(p.xz)-2.))-1.8+cos(u_time)*.3));
+    float d = abs(-(length(vec2(p.y, length(p.xz)-major))-tube+cos(u_time)*breathe));
     float t = u_time * 10.;
 
-    float g = D(p.yxz*4.+u_time*5.)/4.;
+    float g = D(p.yxz*gyroid+u_time*5.)/gyroid;
 
-    d= length(vec2(d,g))-.3;
+    d= length(vec2(d,g))-thickness;
 
     vec3 colour = vec3(g);
 
@@ -147,7 +194,7 @@ export default shaderViz({
     vec3 p; // ray position
     vec3 c; // surface colour
 
-    for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ) {
+    for( int i=0; i< maxSteps ; i++ ) {
       if( abs(h) < INTERSECTION_PRECISION || d > MAX_TRACE_DISTANCE ) break;
       p = cam.ro+cam.rd*d;
       Model m = map( p );
@@ -202,9 +249,9 @@ export default shaderViz({
     float o = AO( pos, nor );                 // Ambient occlusion
     vec3  l = normalize( plp );                    // light direction
 
-    float d = clamp( dot( nor, l ), 0.0, 1.0 )*DS;   // diffuse component
+    float d = clamp( dot( nor, l ), 0.0, 1.0 )*diffuse;   // diffuse component
     float b = clamp( dot( nor, normalize(vec3(-l.x,0,-l.z))), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0)*BS; // back light component
-    float f = pow( clamp(1.0+dot(nor,cam.rd),0.0,1.0), 2.0 )*FS; // fresnel component
+    float f = pow( clamp(1.0+dot(nor,cam.rd),0.0,1.0), 2.0 )*fresnel; // fresnel component
 
     vec3 c = vec3(0.0);
     c += d*LC;                           // diffuse light integration
@@ -215,9 +262,8 @@ export default shaderViz({
     return col*c;
   }
   vec3 render(Surface surface, Camera cam, vec2 uv) {
-    vec3 colour = vec3(.04,.045,.05);
-    colour = vec3(.35, .5, .75);
-    vec3 colourB = vec3(.9, .85, .8);
+    vec3 colour = bgEdge;
+    vec3 colourB = bgCentre;
 
     vec2 pp = uv;
 
@@ -230,7 +276,7 @@ export default shaderViz({
       vec3 pos = surface.position;
 
       float t = u_time*10.;
-      vec3 col = mix(mix(vec3(.8,.3,.6), vec3(.6,.3,.8), cos(length(pos.xy)*3. + t)*cos(length(pos.yz+5.)*1. + t)+sin(length(pos.zx)*10.+10. + t)*.2*cos(length(pos.zy))), vec3(1), smoothstep(0., .1, cos(surface.colour.r*40.)));
+      vec3 col = mix(mix(colA, colB, cos(length(pos.xy)*3. + t)*cos(length(pos.yz+5.)*1. + t)+sin(length(pos.zx)*10.+10. + t)*.2*cos(length(pos.zy))), vec3(1), smoothstep(0., .1, cos(surface.colour.r*40.)));
 
       colour = shade(col, pos, surfaceNormal, ref, cam);
     }

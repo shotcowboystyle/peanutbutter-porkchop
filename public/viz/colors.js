@@ -4,12 +4,36 @@ import { shaderViz } from '../shader.js';
 export default shaderViz({
   title: 'Trippy Colors',
   credit: 'Fahscinate — https://codepen.io/Fahscinate/pen/aJpjKK',
-  uniforms(gl, u, t) {
-    gl.uniform1f(u('time'), t);
+  tags: ['simplex noise', 'noise', 'colour cycling'],
+  about: `3-D simplex noise, sampled at (x, y, time), amplified hard and pushed through sine
+and cosine to make colour. The noise function is the well-known Ashima Arts implementation,
+which you will meet in countless shaders; the interesting part is how little is done with
+it: \`abs(noise) * gain\` is the whole "design".`,
+  params: {
+    speed: { type: 'float', default: 1, min: 0, max: 4, step: 0.01, group: 'Motion', doc: 'How fast the noise slice moves along its third axis.' },
+    zoom:  { type: 'float', default: 300, min: 50, max: 1500, step: 10, group: 'Noise', doc: 'Pixels per noise unit. Larger = smoother blobs.' },
+    gain:  { type: 'float', default: 140, min: 1, max: 400, step: 1, group: 'Noise', doc: 'Multiplier on |noise|. The sine wrap-around is what makes bands.' },
+    hue:   { type: 'float', default: 6.3, min: 0, max: 20, step: 0.1, group: 'Colour', doc: 'Horizontal phase gradient added to every channel.' },
+  },
+  presets: {
+    'Default': {},
+    'Smooth': { gain: 6, zoom: 600 },
+    'Static': { speed: 0.05, gain: 300, zoom: 150 },
+  },
+  notes: [
+    { title: 'Simplex noise', find: 'float snoise(vec3 v)', body: 'Standard textureless 3-D simplex noise. Returns roughly -1..1 and is smooth, so it is used everywhere for organic motion.' },
+    { title: 'Why so many bands?', find: 'n = gain * abs( snoise( coord ));', body: 'Noise is amplified ~140x then wrapped by sin(). Each full 2*PI of n is one colour band, so a tiny change in noise becomes a stripe.' },
+    { title: 'Three phases of one value', find: 'vec3 colors = vec3(', body: 'sin, cos and -sin of the same argument are 90 degrees apart, which keeps the three channels from ever peaking together.' },
+  ],
+  uniforms(gl, u, t, w, h, p) {
+    gl.uniform1f(u('time'), t * p.speed);
   },
   frag: `
 precision highp float;
 uniform float time;
+uniform float zoom;
+uniform float gain;
+uniform float hue;
 
 //
 // Description : Array and textureless GLSL 2D/3D/4D simplex
@@ -112,22 +136,22 @@ float snoise(vec3 v)
 float perlin3( vec3 coord ) {
 
     float n = 0.0;
-    n = 140.0 * abs( snoise( coord ));
+    n = gain * abs( snoise( coord ));
     return n;
 
 }
 
 void main( void ) {
 
-    vec2 uv = gl_FragCoord.xy / vec2(300.0, 300.0);
+    vec2 uv = gl_FragCoord.xy / vec2(zoom, zoom);
     vec3 coord = vec3( uv.xy, -time / 2.0 );
 
     float n = perlin3( coord );
 
     vec3 colors = vec3(
-    		(1.0 / 255.0) * (255.0 - (255.0 * (1.0 - sin(n + 6.3 * uv.x)) / 2.0)),
-           (1.0 / 255.0) * (255.0 - (255.0 * (1.0 - cos(n + 6.3 * uv.x)) / 2.0)),
-           (1.0 / 255.0) * (255.0 - (255.0 * (1.0 + sin(n + 6.3 * uv.x)) / 2.0))
+    		(1.0 / 255.0) * (255.0 - (255.0 * (1.0 - sin(n + hue * uv.x)) / 2.0)),
+           (1.0 / 255.0) * (255.0 - (255.0 * (1.0 - cos(n + hue * uv.x)) / 2.0)),
+           (1.0 / 255.0) * (255.0 - (255.0 * (1.0 + sin(n + hue * uv.x)) / 2.0))
     );
 
     gl_FragColor = vec4( colors.r, colors.g, colors.b, 1.0 );

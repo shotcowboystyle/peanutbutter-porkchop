@@ -145,8 +145,8 @@ const WORLDS = [
   },
 ];
 
-// the original's tweakpane defaults
-const params = {
+// the original's tweakpane defaults; the host passes a live `params` object with these keys
+const DEFAULTS = {
   speed: 1,
   spin: 1,
   swirl: 0.035,
@@ -159,7 +159,11 @@ const params = {
   fogDist: 15,
   lines: 0.5,
   ao: 1,
+  world: "cycle",
+  night: false,
 };
+// names for the `world` select, same order as WORLDS
+export const WORLD_NAMES = ["lemon", "sea", "lilac", "ember", "sorbet", "teal", "rose", "sky", "moss", "slate"];
 
 // Lissajous drift in front of the mandala (the original's idle auto-orbit)
 const ORBIT = {
@@ -183,8 +187,9 @@ const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const jitter = (c, j) =>
   c.map((v) => Math.min(1, Math.max(0, v + rand(-j, j))));
 
-export function createMandala(canvas) {
-  let worldIndex = Math.floor(Math.random() * WORLDS.length);
+export function createMandala(canvas, params = { ...DEFAULTS }) {
+  const pinned = WORLD_NAMES.indexOf(params.world);
+  let worldIndex = pinned >= 0 ? pinned : Math.floor(Math.random() * WORLDS.length);
   let world = WORLDS[worldIndex];
 
   // --- renderer (the host owns canvas pixel size; dpr is folded into it)
@@ -361,12 +366,13 @@ void main() { gl_Position = vec4(position, 1.0); }`,
   function regrowWave(stagger = 0.08) {
     rings.forEach((r) => (r.regrowAt = time + r.index * stagger));
   }
-  function nextWorld() {
-    worldIndex = (worldIndex + 1) % WORLDS.length;
+  function setWorld(i) {
+    worldIndex = i;
     world = WORLDS[worldIndex];
     worldTimer = 0;
     regrowWave();
   }
+  const nextWorld = () => setWorld((worldIndex + 1) % WORLDS.length);
 
   function updateAutoOrbit(dt) {
     autoBlend += (1 - autoBlend) * (1 - Math.exp(-dt * ORBIT.ramp));
@@ -403,7 +409,14 @@ void main() { gl_Position = vec4(position, 1.0); }`,
       time += tdt;
 
       worldTimer += tdt;
-      if (worldTimer >= params.worldEvery) nextWorld();
+      const want = WORLD_NAMES.indexOf(params.world);
+      if (want >= 0) { if (want !== worldIndex) setWorld(want); }
+      else if (worldTimer >= params.worldEvery) nextWorld();
+      if (camera.fov !== params.fov) camera.perspective({ fov: params.fov });
+      uniforms.u_fog.value = params.fog;
+      uniforms.u_lines.value = params.lines;
+      uniforms.u_ao.value = params.ao;
+      uniforms.u_dark.value += ((params.night ? 1 : 0) - uniforms.u_dark.value) * (1 - Math.exp(-dt * 3));
       // and every so often a single ring re-rolls
       regrowTimer += tdt;
       if (regrowTimer >= params.regrowEvery) {

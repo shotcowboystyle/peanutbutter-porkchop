@@ -1,17 +1,7 @@
-import hex from './viz/hex.js';
-import mandala from './viz/mandala.js';
-import aizawa from './viz/aizawa.js';
-import toric from './viz/toric.js';
-import triangles from './viz/triangles.js';
-import colors from './viz/colors.js';
-import curves from './viz/curves.js';
-import candywarp from './viz/candywarp.js';
-import atan2 from './viz/atan2.js';
-import plasma from './viz/plasma.js';
+import { VIZ, slug } from './viz/index.js';
+import { defaults } from './shader.js';
 
-const VIZ = [hex, mandala, aizawa, toric, triangles, colors, curves, candywarp, atan2, plasma];
 const SNAP_T = 2; // seconds of warm-up time so a snapshot is never a blank first frame
-const slug = (v) => v.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 const stage = document.getElementById('stage');
 const grid = document.getElementById('grid');
@@ -46,7 +36,7 @@ async function mountFull(i) {
   const d = dprFor(VIZ[i]);
   canvas.width = Math.round(innerWidth * d);
   canvas.height = Math.round(innerHeight * d);
-  const handle = await VIZ[i].create(canvas);
+  const handle = await VIZ[i].create(canvas, defaults(VIZ[i]));
   if (token !== fullToken) { handle.destroy(); return; }
   handle.resize(canvas.width, canvas.height);
   full = { handle, canvas, index: i };
@@ -83,7 +73,7 @@ async function snapshot(i) {
   c.width = Math.max(2, tile.clientWidth);
   c.height = Math.max(2, tile.clientHeight);
   try {
-    const handle = await VIZ[i].create(c);
+    const handle = await VIZ[i].create(c, defaults(VIZ[i]));
     handle.resize(c.width, c.height);
     handle.frame(SNAP_T);
     blit(i, c);
@@ -129,7 +119,7 @@ async function setLive(i) {
   canvas.height = Math.max(2, tile.clientHeight);
   let handle;
   try {
-    handle = await VIZ[i].create(canvas);
+    handle = await VIZ[i].create(canvas, defaults(VIZ[i]));
   } catch (e) {
     tile.classList.add('broken');
     reportError(e); // same as snapshot(): keep the grid usable
@@ -279,6 +269,9 @@ window.addEventListener('keydown', (e) => {
       break;
     case 'f':
       document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+      break;
+    case 'e':
+      location.href = '/studio/#' + slug(VIZ[index]);
       break;
     case 'Home': openFull(0); break;
     case 'End': openFull(VIZ.length - 1); break;
