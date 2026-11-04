@@ -1,9 +1,12 @@
 {
   "name": "peanutbutter-porkchop",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "check": "node scripts/check-viz.mjs",
+    "new:viz": "node scripts/new-viz.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.148.0"

@@ -3,10 +3,7 @@
 // UnrealBloom. Dropped: HUD, fonts, GSAP intro, OrbitControls (orbit is manual).
 import { makeHandle } from '../shader.js';
 
-const CONFIG = {
-  points: 120000, burnIn: 3000, dt: 0.0045, scale: 16.0,
-  a: 0.95, b: 0.70, c: 0.60, d: 3.50, e: 0.25, f: 0.10,
-};
+const BURN_IN = 3000;
 
 const vertexShader = `
     attribute float lineDistance;
@@ -119,36 +116,38 @@ const baseFragmentShader = `
     }
 `;
 
-function derivatives(x, y, z) {
-  const dx = (z - CONFIG.b) * x - CONFIG.d * y;
-  const dy = CONFIG.d * x + (z - CONFIG.b) * y;
-  const dz = CONFIG.c + CONFIG.a * z - (z * z * z) / 3.0 - (x * x + y * y) * (1.0 + CONFIG.e * z) + CONFIG.f * z * x * x * x;
+// The Aizawa system. a..f are the attractor's constants; the defaults are the classic set.
+function derivatives(x, y, z, C) {
+  const dx = (z - C.b) * x - C.d * y;
+  const dy = C.d * x + (z - C.b) * y;
+  const dz = C.c + C.a * z - (z * z * z) / 3.0 - (x * x + y * y) * (1.0 + C.e * z) + C.f * z * x * x * x;
   return { dx, dy, dz };
 }
 
-function rk4Step(state) {
+// Classic 4th-order Runge-Kutta: four slope estimates per step, weighted 1-2-2-1.
+function rk4Step(state, C) {
   const { x, y, z } = state;
-  const dt = CONFIG.dt;
-  const k1 = derivatives(x, y, z);
-  const k2 = derivatives(x + k1.dx * dt * 0.5, y + k1.dy * dt * 0.5, z + k1.dz * dt * 0.5);
-  const k3 = derivatives(x + k2.dx * dt * 0.5, y + k2.dy * dt * 0.5, z + k2.dz * dt * 0.5);
-  const k4 = derivatives(x + k3.dx * dt, y + k3.dy * dt, z + k3.dz * dt);
+  const dt = C.dt;
+  const k1 = derivatives(x, y, z, C);
+  const k2 = derivatives(x + k1.dx * dt * 0.5, y + k1.dy * dt * 0.5, z + k1.dz * dt * 0.5, C);
+  const k3 = derivatives(x + k2.dx * dt * 0.5, y + k2.dy * dt * 0.5, z + k2.dz * dt * 0.5, C);
+  const k4 = derivatives(x + k3.dx * dt, y + k3.dy * dt, z + k3.dz * dt, C);
   state.x += (dt / 6.0) * (k1.dx + 2.0 * k2.dx + 2.0 * k3.dx + k4.dx);
   state.y += (dt / 6.0) * (k1.dy + 2.0 * k2.dy + 2.0 * k3.dy + k4.dy);
   state.z += (dt / 6.0) * (k1.dz + 2.0 * k2.dz + 2.0 * k3.dz + k4.dz);
 }
 
-function generateGeometry(THREE) {
-  const positions = new Float32Array(CONFIG.points * 3);
-  const lineDistances = new Float32Array(CONFIG.points);
+function generateGeometry(THREE, C) {
+  const positions = new Float32Array(C.points * 3);
+  const lineDistances = new Float32Array(C.points);
   const state = { x: 0.1, y: 0.0, z: 0.0 };
-  for (let i = 0; i < CONFIG.burnIn; i++) rk4Step(state);
-  for (let i = 0; i < CONFIG.points; i++) {
-    rk4Step(state);
-    positions[i * 3] = state.x * CONFIG.scale;
-    positions[i * 3 + 1] = state.z * CONFIG.scale;
-    positions[i * 3 + 2] = state.y * CONFIG.scale;
-    lineDistances[i] = i / CONFIG.points;
+  for (let i = 0; i < BURN_IN; i++) rk4Step(state, C); // let the trajectory fall onto the attractor first
+  for (let i = 0; i < C.points; i++) {
+    rk4Step(state, C);
+    positions[i * 3] = state.x * C.scale;
+    positions[i * 3 + 1] = state.z * C.scale;
+    positions[i * 3 + 2] = state.y * C.scale;
+    lineDistances[i] = i / C.points;
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -164,7 +163,45 @@ export default {
   title: 'Aizawa Attractor',
   credit: 'VoXelo — https://codepen.io/VoXelo/pen/pvRejNE',
   dpr: 1, // bloom pass; dpr 1 is the original's practical ceiling on most GPUs anyway
-  async create(canvas) {
+  tags: ['three.js', 'strange attractor', 'RK4', 'additive blending', 'bloom'],
+  about: `A **strange attractor**: integrate a small system of differential equations
+(the Aizawa system) with Runge-Kutta, and the trajectory traces a shape it never leaves.
+120k points become one \`THREE.Line\`, drawn three times with additive blending and a custom
+fragment shader that runs dashes and "comet" packets along the line distance. UnrealBloom
+on top. The constants a..f are the attractor itself: nudge them and the shape changes
+character or collapses.`,
+  params: {
+    a: { type: 'float', default: 0.95, min: 0.5, max: 1.3, step: 0.005, live: false, group: 'Attractor', doc: 'Aizawa a. Regenerates the trajectory.' },
+    b: { type: 'float', default: 0.7, min: 0.3, max: 1.1, step: 0.005, live: false, group: 'Attractor', doc: 'Aizawa b.' },
+    c: { type: 'float', default: 0.6, min: 0.2, max: 1.0, step: 0.005, live: false, group: 'Attractor', doc: 'Aizawa c.' },
+    d: { type: 'float', default: 3.5, min: 2, max: 5, step: 0.01, live: false, group: 'Attractor', doc: 'Aizawa d (rotation rate around z).' },
+    e: { type: 'float', default: 0.25, min: 0, max: 0.6, step: 0.005, live: false, group: 'Attractor', doc: 'Aizawa e.' },
+    f: { type: 'float', default: 0.1, min: 0, max: 0.3, step: 0.005, live: false, group: 'Attractor', doc: 'Aizawa f.' },
+    points: { type: 'int', default: 120000, min: 5000, max: 300000, step: 5000, live: false, group: 'Attractor', doc: 'Trajectory samples.' },
+    dt: { type: 'float', default: 0.0045, min: 0.001, max: 0.02, step: 0.0005, live: false, group: 'Attractor', doc: 'Integration step. Too large and RK4 flies off the attractor.' },
+    scale: { type: 'float', default: 16, min: 5, max: 30, step: 0.5, live: false, group: 'Attractor', doc: 'World units per attractor unit.' },
+    speed: { type: 'float', default: 1, min: 0, max: 4, step: 0.05, group: 'Motion', doc: 'Shader time multiplier (dash and comet speed).' },
+    orbit: { type: 'float', default: 75, min: 5, max: 300, step: 1, group: 'Motion', doc: 'Seconds per camera orbit.' },
+    gain: { type: 'float', default: 1, min: 0, max: 3, step: 0.05, group: 'Look', doc: 'Line brightness multiplier (before bloom).' },
+    bloom: { type: 'float', default: 0.6, min: 0, max: 3, step: 0.05, group: 'Look', doc: 'UnrealBloom strength.' },
+    bloomRadius: { type: 'float', default: 0.5, min: 0, max: 1, step: 0.01, group: 'Look', doc: 'UnrealBloom radius.' },
+    bloomThreshold: { type: 'float', default: 0.2, min: 0, max: 1, step: 0.01, group: 'Look', doc: 'Brightness below which bloom ignores a pixel.' },
+    fog: { type: 'float', default: 0.006, min: 0, max: 0.03, step: 0.0005, group: 'Look', doc: 'Exponential fog density.' },
+  },
+  presets: {
+    'Default': {},
+    'Wild': { a: 1.15, e: 0.45, f: 0.22, bloom: 1.2 },
+    'Thin': { points: 40000, gain: 2, bloom: 0.3, dt: 0.009 },
+    'Fast orbit': { orbit: 12, speed: 2.5 },
+  },
+  notes: [
+    { title: 'The system', find: 'function derivatives(x, y, z, C)', body: 'Three coupled ODEs. The `z` equation\'s cubic terms are what fold the flow back onto itself.' },
+    { title: 'Integration', find: 'function rk4Step(state, C)', body: 'RK4 is accurate enough that a 120k-point trajectory stays on the attractor; Euler would spiral away at this dt.' },
+    { title: 'Burn-in', find: 'for (let i = 0; i < BURN_IN; i++)', body: 'Discard the first few thousand steps so the drawn curve starts on the attractor, not on the approach to it.' },
+    { title: 'Dashes along the line', find: 'float dashCell = fract(vDistance', body: 'The vertex attribute `lineDistance` (0..1 along the curve) feeds fract() to make moving dashes and comet packets in the fragment shader.' },
+    { title: 'Three additive copies', find: 'const lines = [', body: 'Same geometry, three phases and gains, slightly scaled and rotated. Additive blending sums them into a hologram-like glow.' },
+  ],
+  async create(canvas, p) {
     const [THREE, { EffectComposer }, { RenderPass }, { UnrealBloomPass }] = await Promise.all([
       import('three'),
       import('three/addons/postprocessing/EffectComposer.js'),
@@ -173,7 +210,7 @@ export default {
     ]);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a0515, 0.006);
+    scene.fog = new THREE.FogExp2(0x0a0515, p.fog);
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
     const target = new THREE.Vector3(0, 4, 0);
 
@@ -185,10 +222,10 @@ export default {
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.6, 0.5, 0.2);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), p.bloom, p.bloomRadius, p.bloomThreshold);
     composer.addPass(bloomPass);
 
-    const attractorGeo = generateGeometry(THREE);
+    const attractorGeo = generateGeometry(THREE, p);
     const createMaterial = (phase, gain) => new THREE.ShaderMaterial({
       uniforms: { time: { value: 0 }, phase: { value: phase }, gain: { value: gain } },
       vertexShader, fragmentShader,
@@ -229,26 +266,29 @@ export default {
     scene.add(particles);
 
     // OrbitControls autoRotateSpeed 0.8 == one orbit per 75 s, from (0,15,80) around the target.
-    const ORBIT = (Math.PI * 2) / 75;
+    let sizeGain = 1;
 
     return makeHandle({
-      render(time) {
-        lines.forEach((l) => { l.material.uniforms.time.value = time; });
+      render(t) {
+        const time = t * p.speed;
+        const ORBIT = (Math.PI * 2) / p.orbit;
+        lines.forEach((l, i) => { l.material.uniforms.time.value = time; l.material.uniforms.gain.value = GAINS[i] * sizeGain * p.gain; });
+        bloomPass.strength = p.bloom; bloomPass.radius = p.bloomRadius; bloomPass.threshold = p.bloomThreshold;
+        scene.fog.density = p.fog;
         baseMaterial.uniforms.time.value = time;
         attractorGroup.rotation.y = Math.sin(time * 0.2) * 0.2;
         attractorGroup.position.y = Math.sin(time * 0.5) * 1.5;
         particles.rotation.y = time * 0.02;
         particles.rotation.z = time * 0.01;
-        camera.position.set(80 * Math.sin(time * ORBIT), 15, 80 * Math.cos(time * ORBIT));
+        camera.position.set(80 * Math.sin(t * ORBIT), 15, 80 * Math.cos(t * ORBIT));
         camera.lookAt(target);
         composer.render();
       },
       resize(w, h) {
         // 120k additively-blended line segments saturate to white on a small canvas;
         // scale line gain with width so thumbnails and tiles keep the fullscreen look.
-        const f = Math.min(1, w / 1600);
-        lines.forEach((l, i) => { l.material.uniforms.gain.value = GAINS[i] * f; });
-        pMat.opacity = 0.4 * f;
+        sizeGain = Math.min(1, w / 1600);
+        pMat.opacity = 0.4 * sizeGain;
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         renderer.setSize(w, h, false);
