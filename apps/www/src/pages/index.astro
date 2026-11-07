@@ -1,0 +1,80 @@
+---
+import Base from '../layouts/Base.astro';
+
+const links = [
+  {
+    href: 'https://visual.peanutbutterporkchop.com/',
+    title: 'Shaders & visualizations',
+    blurb: 'Keyboard-driven WebGL playground. Press e for the studio.',
+  },
+  {
+    href: 'https://shop.peanutbutterporkchop.com/',
+    title: 'Shop',
+    blurb: 'Merch and prints.',
+  },
+];
+---
+
+<Base
+  title="Peanut Butter Pork Chop"
+  description="Peanut Butter Pork Chop: shaders, visualizations and merch."
+>
+  <main>
+    <h1>Peanut Butter Pork Chop</h1>
+    <p class="tagline">Trippy pixels, questionable snacks.</p>
+    <nav aria-label="Sites">
+      {links.map((l) => (
+        <a class="card" href={l.href}>
+          <strong>{l.title}</strong>
+          <span>{l.blurb}</span>
+        </a>
+      ))}
+    </nav>
+  </main>
+</Base>
+
+<style>
+  main {
+    min-height: 100dvh;
+    display: grid;
+    place-content: center;
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 6vw, 4rem);
+    letter-spacing: -0.02em;
+  }
+  .tagline {
+    margin: 0;
+    color: var(--muted);
+  }
+  nav {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    margin-top: 1rem;
+  }
+  .card {
+    display: grid;
+    gap: 0.4rem;
+    padding: 1.5rem;
+    border: 1px solid #2a2a33;
+    border-radius: 1rem;
+    text-decoration: none;
+    transition:
+      border-color 0.2s,
+      transform 0.2s;
+  }
+  .card:hover,
+  .card:focus-visible {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .card span {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+</style>

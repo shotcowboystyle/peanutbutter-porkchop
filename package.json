@@ -3,12 +3,37 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "check": "node scripts/check-viz.mjs",
-    "new:viz": "node scripts/new-viz.mjs"
+    "postinstall": "node -e \"process.env.CI||require('node:child_process').spawnSync('lefthook',['install'],{stdio:'inherit'})\"",
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "deploy": "pnpm -r deploy",
+    "lint": "ultracite check",
+    "fix": "ultracite fix",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt .",
+    "typecheck": "pnpm -r typecheck",
+    "dead-code": "fallow dead-code -c .config/fallow.toml",
+    "spell": "cspell -c .config/cspell.json --no-progress \"**\" \".config/**\" \".github/**\" \".vscode/**\" \"apps/*/.env.example\"",
+    "lint:md": "markdownlint-cli2 --config .config/markdownlint-cli2.jsonc \"**/*.md\"",
+    "lint:yaml": "yamllint -s -c .config/yamllint.yaml .",
+    "lint:actions": "actionlint -config-file .config/actionlint.yaml",
+    "secrets": "betterleaks git . --no-banner --redact -c .config/betterleaks.toml",
+    "audit:site": "squirrel audit --config .config/squirrel.toml --fail-on 'severity>=error'",
+    "check": "pnpm lint && pnpm format && pnpm typecheck && pnpm dead-code && pnpm spell && pnpm lint:md && pnpm lint:yaml && pnpm lint:actions && pnpm secrets && pnpm -r check"
   },
   "devDependencies": {
-    "wrangler": "^4.148.0"
-  }
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "cspell": "10.4.1",
+    "fallow": "3.40.0",
+    "oxfmt": "0.77.0",
+    "oxlint": "1.92.0",
+    "typescript": "5.9.3",
+    "ultracite": "8.1.1",
+    "wrangler": "4.158.0"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "packageManager": "pnpm@12.18.0"
 }

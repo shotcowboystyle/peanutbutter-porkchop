@@ -1,0 +1,26 @@
+# Dead code, duplication and dependency hygiene (`pnpm dead-code`).
+ignorePatterns = [
+  "**/.config/**",
+  "**/.agents/**",
+  "**/.claude/**",
+  "**/.astro/**",
+  # Scaffold sources for `pnpm new:viz`; they import ../shader.js relative to their destination.
+  "**/apps/visual/templates/**",
+]
+ignoreDependencies = [
+  # Browser-only, resolved by the CDN import map in apps/visual/public/*.html.
+  "three",
+  "wtc-gl",
+  "marked",
+]
+# Provided by mise (.config/mise.toml) or the squirrelscan installer, not npm.
+ignoreBinaries = ["actionlint", "betterleaks", "markdownlint-cli2", "yamllint", "squirrel"]
+# Browser modules loaded by <script type="module"> / the viz registry, not imported statically.
+entry = [
+  "apps/visual/public/app.js",
+  "apps/visual/public/studio/studio.js",
+  "apps/visual/public/studio/studio.css",
+  "apps/visual/public/viz/**/*.js",
+  "apps/visual/scripts/*.mjs",
+  "apps/*/astro.config.mjs",
+]

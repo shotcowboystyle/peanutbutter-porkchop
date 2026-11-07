@@ -1,0 +1,87 @@
+---
+import Base from '../../layouts/Base.astro';
+import { checkoutUrl, formatMoney, listAllProducts, type Product } from '../../lib/fourthwall';
+
+export async function getStaticPaths() {
+  const products = await listAllProducts();
+  return products.map((product) => ({ params: { slug: product.slug }, props: { product } }));
+}
+
+const { product } = Astro.props as { product: Product };
+const img = product.images[0];
+---
+
+<Base
+  title={`${product.name} · Peanut Butter Pork Chop`}
+  description={product.description.slice(0, 160)}
+>
+  <main class="product">
+    {img && <img src={img.url} alt={product.name} width={img.width} height={img.height} />}
+    <section>
+      <h1>{product.name}</h1>
+      <div class="desc" set:html={product.description} />
+      <ul class="variants">
+        {product.variants.map((v) => {
+          const soldOut = v.stock.type === 'LIMITED' && v.stock.inStock <= 0;
+          return (
+            <li>
+              <span>{v.name}</span>
+              <span>{formatMoney(v.unitPrice)}</span>
+              {soldOut ? (
+                <em>Sold out</em>
+              ) : (
+                <a class="buy" href={checkoutUrl(v.id)}>
+                  Buy
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .product {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  }
+  img {
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    background: var(--line);
+  }
+  .desc {
+    color: var(--muted);
+  }
+  .variants {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .variants li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .buy {
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #111;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  em {
+    color: var(--muted);
+    font-style: normal;
+  }
+</style>

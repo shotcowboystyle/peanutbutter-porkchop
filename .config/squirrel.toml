@@ -1,0 +1,6 @@
+# squirrelscan site audit: `pnpm audit:site <url>`
+[crawler]
+max_pages = 100
+
+[rules]
+enable = ["*"]

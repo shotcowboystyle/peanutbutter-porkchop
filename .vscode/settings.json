@@ -1,0 +1,14 @@
+{
+  "npm.packageManager": "pnpm",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
+  "[astro]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "cSpell.import": [".config/cspell.json"],
+  "markdownlint.configFile": ".config/markdownlint-cli2.jsonc",
+  "yaml.customTags": []
+}

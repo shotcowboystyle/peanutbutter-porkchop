@@ -1,0 +1,18 @@
+# Secret scanning. Extends the upstream default rules; local allowlist only.
+title = "peanutbutter-porkchop"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Lock files, examples, build output and vendored agent skills never hold secrets"
+paths = [
+  '''pnpm-lock\.yaml$''',
+  '''\.env\.example$''',
+  '''(^|/)\.agents/.*''',
+  '''(^|/)\.claude/.*''',
+  '''(^|/)dist/.*''',
+  '''(^|/)\.astro/.*''',
+  '''(^|/)\.wrangler/.*''',
+  '''(^|/)node_modules/.*''',
+]
