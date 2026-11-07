@@ -17,7 +17,7 @@
     "lint:md": "markdownlint-cli2 --config .config/markdownlint-cli2.jsonc \"**/*.md\"",
     "lint:yaml": "yamllint -s -c .config/yamllint.yaml .",
     "lint:actions": "actionlint -config-file .config/actionlint.yaml",
-    "secrets": "betterleaks dir . --no-banner --redact -c .config/betterleaks.toml",
+    "secrets": "betterleaks git . --no-banner --redact -c .config/betterleaks.toml",
     "audit:site": "squirrel audit --config .config/squirrel.toml --fail-on 'severity>=error'",
     "check": "pnpm lint && pnpm format && pnpm typecheck && pnpm dead-code && pnpm spell && pnpm lint:md && pnpm lint:yaml && pnpm lint:actions && pnpm secrets && pnpm -r check"
   },
