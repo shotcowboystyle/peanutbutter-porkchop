@@ -1,0 +1,93 @@
+---
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={Astro.url} />
+    <meta name="theme-color" content="#0b0b0f" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-F2JQLKK9D7" is:inline></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      gtag('config', 'G-F2JQLKK9D7');
+    </script>
+  </head>
+  <body>
+    <header>
+      <a href="/" class="brand">
+        Peanut Butter Pork Chop
+      </a>
+      <nav>
+        <a href="https://www.peanutbutterporkchop.com/">Home</a>
+        <a href="https://visual.peanutbutterporkchop.com/">Visuals</a>
+      </nav>
+    </header>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0b0f;
+    --fg: #f4f1ea;
+    --muted: #9a958a;
+    --accent: #ffb347;
+    --line: #2a2a33;
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  a {
+    color: inherit;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  header nav {
+    display: flex;
+    gap: 1rem;
+  }
+  header nav a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .brand {
+    font-weight: 700;
+    text-decoration: none;
+  }
+  main {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+  }
+</style>

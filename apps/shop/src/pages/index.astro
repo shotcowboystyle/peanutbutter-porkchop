@@ -1,0 +1,69 @@
+---
+import Base from '../layouts/Base.astro';
+import { formatMoney, listAllProducts, minPrice } from '../lib/fourthwall';
+
+const products = await listAllProducts();
+---
+
+<Base
+  title="Shop · Peanut Butter Pork Chop"
+  description="Peanut Butter Pork Chop merch and prints."
+>
+  <main>
+    <h1>Shop</h1>
+    {products.length === 0 && <p>Nothing on the shelves yet.</p>}
+    <ul class="grid">
+      {products.map((p) => {
+        const price = minPrice(p);
+        const img = p.images[0];
+        return (
+          <li>
+            <a href={`/products/${p.slug}/`}>
+              {img && (
+                <img src={img.url} alt="" width={img.width} height={img.height} loading="lazy" />
+              )}
+              <strong>{p.name}</strong>
+              <span>
+                {price ? formatMoney(price) : ''}
+                {p.state === 'SOLD_OUT' && <em>Sold out</em>}
+              </span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </main>
+</Base>
+
+<style>
+  .grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  }
+  .grid a {
+    display: grid;
+    gap: 0.4rem;
+    text-decoration: none;
+  }
+  img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    background: var(--line);
+  }
+  span {
+    color: var(--muted);
+    display: flex;
+    gap: 0.5rem;
+  }
+  em {
+    color: var(--accent);
+    font-style: normal;
+  }
+</style>

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD033": false,
+    "MD041": false,
+    "MD024": { "siblings_only": true },
+    // Table pipe spacing is the formatter's job.
+    "MD060": false,
+    // Studio primers link to viz headings rendered by the studio, not by the file.
+    "MD051": false,
+  },
+  "ignores": ["**/node_modules/**", "**/.agents/**", "**/.claude/**", "**/dist/**"],
+}
