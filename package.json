@@ -13,7 +13,7 @@
     "format:fix": "oxfmt .",
     "typecheck": "pnpm -r typecheck",
     "dead-code": "fallow dead-code -c .config/fallow.toml",
-    "spell": "cspell -c .config/cspell.json --no-progress --dot \"**\"",
+    "spell": "cspell -c .config/cspell.json --no-progress \"**\" \".config/**\" \".github/**\" \".vscode/**\" \"apps/*/.env.example\"",
     "lint:md": "markdownlint-cli2 --config .config/markdownlint-cli2.jsonc \"**/*.md\"",
     "lint:yaml": "yamllint -s -c .config/yamllint.yaml .",
     "lint:actions": "actionlint -config-file .config/actionlint.yaml",
