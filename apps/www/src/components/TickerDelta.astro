@@ -1,0 +1,30 @@
+<div
+  class="ticker-delta"
+  role="img"
+  aria-label="WE BUILD DYNAMIC BRAND EXPERIENCE · STUDIO - · CORPORATE IDENTITY DESIGN -"
+></div>
+
+<script>
+  import { mountTickerDelta } from './ticker-delta';
+
+  for (const el of document.querySelectorAll<HTMLElement>('.ticker-delta')) {
+    try {
+      mountTickerDelta(el);
+    } catch {
+      // Safe to continue: no WebGL leaves an empty box; the page still works.
+    }
+  }
+</script>
+
+<style>
+  .ticker-delta {
+    position: relative;
+    width: min(100%, 28rem);
+    aspect-ratio: 1;
+    margin-inline: auto;
+    overflow: hidden;
+    /* Vertical swipes still scroll the page; sideways ones wind the belt. */
+    touch-action: pan-y;
+    user-select: none;
+  }
+</style>
