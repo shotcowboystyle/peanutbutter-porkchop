@@ -36,6 +36,9 @@ const { title, description } = Astro.props;
       </nav>
     </header>
     <slot />
+    <footer class="site-footer">
+      <a href="/privacy/">Privacy Policy</a>
+    </footer>
   </body>
 </html>
 
@@ -89,5 +92,14 @@ const { title, description } = Astro.props;
     max-width: 72rem;
     margin: 0 auto;
     padding: 1.5rem 1rem 4rem;
+  }
+  .site-footer {
+    display: grid;
+    place-items: center;
+    min-height: 3rem;
+    font-size: 0.85rem;
+  }
+  .site-footer a {
+    color: var(--muted);
   }
 </style>

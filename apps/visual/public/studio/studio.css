@@ -106,6 +106,10 @@ pre {
 #brand {
   color: var(--dim);
 }
+#top-privacy {
+  color: var(--dim);
+  font-size: 12px;
+}
 #top-title {
   font-weight: 600;
 }
