@@ -11,6 +11,15 @@ export const MANIFEST = [
   'candywarp',
   'atan2',
   'plasma',
+  'kishimisu',
+  'mandelbulb',
+  'kaleido-splash',
+  'urchin',
+  'full-spectrum',
+  'whirlpool',
+  'weird-truchet',
+  'graphic-design',
+  'sponge-tunnel',
 ];
 
 export const slug = (v) => v.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
