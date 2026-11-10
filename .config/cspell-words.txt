@@ -115,3 +115,10 @@ xzyw
 yamllint
 yoyo
 zzww
+Originkit
+Penrose
+Avenir
+centreline
+lerp
+aniso
+loadingdone
