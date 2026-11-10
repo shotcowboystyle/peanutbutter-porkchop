@@ -65,15 +65,15 @@ const FONT_FAMILY = "Montserrat, 'Avenir Next', Inter, Helvetica, Arial, sans-se
 /** Left (+Z), top (+Y), right (+X). */
 const FACES: [Face, Face, Face] = [
   {
-    text: 'WE BUILD DYNAMIC BRAND EXPERIENCE',
+    text: 'PEANUT BUTTER PORK CHOP',
     size: 7,
     weight: 400,
     fill: '#0A006B',
     ink: '#FFFFFF',
   },
-  { text: 'STUDIO -', size: 5, weight: 700, fill: '#FEFE66', ink: '#111111' },
+  { text: 'PEANUT BUTTER PORK CHOP', size: 5, weight: 700, fill: '#FEFE66', ink: '#111111' },
   {
-    text: 'CORPORATE IDENTITY DESIGN -',
+    text: 'PEANUT BUTTER PORK CHOP',
     size: 3,
     weight: 400,
     fill: '#0027FF',
