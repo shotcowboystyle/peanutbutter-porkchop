@@ -30,6 +30,7 @@
     </script>
   </head>
   <body>
+    <h1 class="sr-only">peanutbutter-porkchop visualization studio</h1>
     <div id="studio">
       <header id="top">
         <a id="brand" href="/" title="Back to the site (Esc)">&larr; peanutbutter-porkchop</a>
@@ -41,7 +42,13 @@
       </header>
 
       <aside id="rail">
-        <input id="search" type="search" placeholder="Filter…" autocomplete="off" />
+        <input
+          id="search"
+          type="search"
+          aria-label="Filter visualizations"
+          placeholder="Filter…"
+          autocomplete="off"
+        />
         <ul id="list"></ul>
         <select id="list-select" aria-label="Visualization"></select>
       </aside>
