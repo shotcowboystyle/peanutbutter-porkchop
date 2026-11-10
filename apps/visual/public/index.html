@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>peanutbutter-porkchop</title>
+    <meta
+      name="description"
+      content="Generative WebGL visualizations from peanutbutter-porkchop. Swipe or use arrow keys to browse; open the grid to see them all."
+    />
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-F2JQLKK9D7"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -94,6 +98,14 @@
       body[data-mode='grid'] #stage {
         visibility: hidden;
       }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
       body.snap #grid {
         transition: none;
       }
@@ -109,6 +121,7 @@
     </script>
   </head>
   <body data-mode="full">
+    <h1 class="sr-only">peanutbutter-porkchop visualizations</h1>
     <main id="stage"></main>
     <div id="grid"><div id="cells"></div></div>
     <script type="module" src="app.js"></script>

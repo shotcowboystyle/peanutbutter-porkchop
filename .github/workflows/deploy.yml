@@ -46,7 +46,7 @@ jobs:
       - name: Site audit (squirrelscan)
         run: |
           curl -fsSL https://install.squirrelscan.com | bash
-          "$HOME/.squirrel/bin/squirrel" audit "https://${HOST}.peanutbutterporkchop.com/" \
-            --config .config/squirrel.toml --fail-on 'severity>=error' 2>/dev/null
+          squirrel audit "https://${HOST}.peanutbutterporkchop.com/" \
+            --config .config/squirrel.toml --fail-on 'severity>=error'
         env:
           HOST: ${{ matrix.app }}
